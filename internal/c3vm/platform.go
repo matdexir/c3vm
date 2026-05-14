@@ -14,7 +14,6 @@ func Detect() Platform {
 	osMap := map[string]string{
 		"darwin":  "macos",
 		"linux":   "linux",
-		"windows": "windows",
 		"netbsd":  "netbsd",
 		"openbsd": "openbsd",
 		"android": "android",
@@ -38,8 +37,6 @@ func (p Platform) AssetName() string {
 	switch p.OS {
 	case "macos":
 		return fmt.Sprintf("c3-macos")
-	case "windows":
-		return fmt.Sprintf("c3-windows")
 	case "linux":
 		return fmt.Sprintf("c3-linux")
 	case "android":
@@ -54,7 +51,7 @@ func (p Platform) AssetName() string {
 }
 
 func (p Platform) ArchiveExt() string {
-	if p.OS == "macos" || p.OS == "windows" {
+	if p.OS == "macos" {
 		return ".zip"
 	}
 	return ".tar.gz"

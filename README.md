@@ -2,6 +2,8 @@
 
 Manage multiple versions of the [C3 compiler](https://github.com/c3lang/c3c) on your machine.
 
+Supports macOS and Linux only.
+
 ## Installation
 
 ```bash

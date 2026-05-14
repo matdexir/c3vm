@@ -111,9 +111,6 @@ func (v *C3VM) Install(version string) error {
 		if !info.IsDir() && info.Name() == "c3c" {
 			c3cSrc = path
 		}
-		if strings.HasSuffix(info.Name(), ".exe") && strings.HasPrefix(info.Name(), "c3c") {
-			c3cSrc = path
-		}
 		return nil
 	})
 

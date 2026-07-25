@@ -9,8 +9,9 @@ import (
 )
 
 var listRemoteCmd = &cobra.Command{
-	Use:   "list-remote",
-	Short: "List available versions from GitHub",
+	Use:     "list-remote",
+	Aliases: []string{"lr"},
+	Short:   "List available versions from GitHub",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vm, err := c3vm.New()
 		if err != nil {

@@ -8,8 +8,9 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List installed versions",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List installed versions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vm, err := c3vm.New()
 		if err != nil {

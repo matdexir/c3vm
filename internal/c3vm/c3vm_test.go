@@ -40,6 +40,34 @@ func TestResolveVersion(t *testing.T) {
 	if tag != "v0.8.0" {
 		t.Errorf("ResolveVersion(v0.8.0) = %q, want %q", tag, "v0.8.0")
 	}
+
+	tag, err = v.ResolveVersion("0.8.0")
+	if err != nil {
+		t.Fatalf("ResolveVersion(0.8.0) returned error: %v", err)
+	}
+	if tag != "v0.8.0" {
+		t.Errorf("ResolveVersion(0.8.0) = %q, want %q", tag, "v0.8.0")
+	}
+}
+
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"v0.8.0", "v0.8.0"},
+		{"0.8.0", "v0.8.0"},
+		{"  v0.8.0  ", "v0.8.0"},
+		{"  0.8.0  ", "v0.8.0"},
+		{"v0.10.0", "v0.10.0"},
+		{"0.10.0", "v0.10.0"},
+	}
+	for _, tc := range tests {
+		got := normalizeVersion(tc.input)
+		if got != tc.want {
+			t.Errorf("normalizeVersion(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
 }
 
 func TestBinInPath(t *testing.T) {

@@ -46,7 +46,7 @@ func setupLogger() error {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stderr, opts)
 	case "text":
-		handler = slog.NewTextHandler(os.Stderr, opts)
+		handler = slog.NewTextHandler(newColorWriter(os.Stderr), opts)
 	default:
 		return fmt.Errorf("unsupported log format: %s (use text or json)", logFormat)
 	}

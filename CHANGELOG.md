@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/matdexir/c3vm/compare/v0.1.0...v0.2.0) (2026-07-25)
+
+
+### Features
+
+* accept version strings with or without 'v' prefix ([#16](https://github.com/matdexir/c3vm/issues/16)) ([ca7d2b9](https://github.com/matdexir/c3vm/commit/ca7d2b92baade478289ce43b591dd3a968aa202c))
+
 ## [0.1.0](https://github.com/matdexir/c3vm/compare/0.0.2...v0.1.0) (2026-07-25)
 
 

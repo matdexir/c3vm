@@ -3,6 +3,7 @@ package c3vm
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -106,51 +107,68 @@ func copyDir(src, dst string) error {
 	})
 }
 
-func (v *C3VM) Install(version string) error {
-	var tag string
+func (v *C3VM) ResolveVersion(version string) (string, error) {
 	if version == "latest" {
 		release, err := github.GetLatestRelease()
 		if err != nil {
-			return err
+			return "", err
 		}
-		tag = release.TagName
-	} else {
-		tag = version
+		return release.TagName, nil
 	}
+	return version, nil
+}
+
+func (v *C3VM) Install(version string) error {
+	tag, err := v.ResolveVersion(version)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("resolved version", "input", version, "tag", tag)
 
 	destDir := v.VersionDir(tag)
 	if _, err := os.Stat(destDir); err == nil {
 		return fmt.Errorf("version %s is already installed", tag)
 	}
 
+	slog.Debug("version not installed, starting download", "tag", tag, "dest", destDir)
+
 	plat := Detect()
+	slog.Debug("detected platform", "os", plat.OS, "arch", plat.Arch, "asset", plat.AssetName())
+
 	assetName := plat.AssetName()
 	ext := plat.ArchiveExt()
 	archiveName := assetName + ext
 
 	url := github.DownloadURL(tag, archiveName)
 
-	fmt.Printf("Downloading %s ...\n", url)
+	slog.Info("downloading", "url", url)
 	tmpDir, err := os.MkdirTemp("", "c3vm-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		slog.Debug("cleaning up temp directory", "path", tmpDir)
+		os.RemoveAll(tmpDir)
+	}()
 
 	archivePath := filepath.Join(tmpDir, archiveName)
+	slog.Debug("downloading archive", "src", url, "dest", archivePath)
 	if err := downloadFile(url, archivePath); err != nil {
 		return err
 	}
+	slog.Debug("download complete", "size", fileSize(archivePath))
 
 	extractDir := filepath.Join(tmpDir, "extracted")
 	if err := os.MkdirAll(extractDir, 0755); err != nil {
 		return err
 	}
 
-	fmt.Println("Extracting ...")
+	slog.Info("extracting", "archive", archivePath)
 	if err := extractArchive(archivePath, extractDir); err != nil {
 		return err
 	}
+	slog.Debug("extraction complete", "extractDir", extractDir)
 
 	// Find c3c binary and std lib in extracted files
 	var c3cSrc string
@@ -169,6 +187,8 @@ func (v *C3VM) Install(version string) error {
 		return nil
 	})
 
+	slog.Debug("located files in archive", "binary", c3cSrc, "stdlib", c3cStdLib)
+
 	if c3cSrc == "" {
 		return fmt.Errorf("could not find c3c binary in the archive")
 	}
@@ -180,25 +200,29 @@ func (v *C3VM) Install(version string) error {
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("failed to create version directory: %w", err)
 	}
+	slog.Debug("created version directory", "path", destDir)
 
 	// Copy c3c binary to version dir
 	destC3C := filepath.Join(destDir, "c3c")
 
+	slog.Debug("copying binary", "src", c3cSrc, "dest", destC3C)
 	if err := copyFile(c3cSrc, destC3C); err != nil {
 		return fmt.Errorf("failed to copy c3c binary: %w", err)
 	}
 
 	// Copy c3c std lib to version dir
 	destC3CStdLib := filepath.Join(destDir, "bin")
+	slog.Debug("copying standard library", "src", c3cStdLib, "dest", destC3CStdLib)
 	if err := copyDir(c3cStdLib, destC3CStdLib); err != nil {
 		return fmt.Errorf("failed to copy c3c standard library: %w", err)
 	}
 
-	fmt.Printf("Installed c3c %s\n", tag)
+	slog.Info("installed", "version", tag)
 
 	// Auto-use if no current version is set
 	current, _ := os.Readlink(v.currentLink())
 	if current == "" {
+		slog.Debug("no active version set, auto-switching", "version", tag)
 		if err := v.Use(tag); err != nil {
 			return err
 		}
@@ -275,9 +299,15 @@ func (v *C3VM) Current() (string, error) {
 }
 
 func (v *C3VM) Use(version string) error {
-	dir := v.VersionDir(version)
+	tag, err := v.ResolveVersion(version)
+	if err != nil {
+		return err
+	}
+	slog.Debug("switching version", "input", version, "tag", tag)
+
+	dir := v.VersionDir(tag)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fmt.Errorf("version %s is not installed", version)
+		return fmt.Errorf("version %s is not installed", tag)
 	}
 
 	if err := v.ensureDirs(); err != nil {
@@ -285,28 +315,33 @@ func (v *C3VM) Use(version string) error {
 	}
 
 	link := v.currentLink()
-
+	slog.Debug("removing existing symlink", "path", link)
 	os.Remove(link)
 
+	slog.Debug("creating current symlink", "target", dir, "link", link)
 	if err := os.Symlink(dir, link); err != nil {
 		return fmt.Errorf("failed to set current symlink: %w", err)
 	}
 
 	binC3C := v.c3cBin()
+	slog.Debug("removing existing bin/c3c symlink", "path", binC3C)
 	os.Remove(binC3C)
 
 	stdLibC3C := v.c3cStdLib()
+	slog.Debug("removing existing lib symlink", "path", stdLibC3C)
 	os.RemoveAll(stdLibC3C)
 
+	slog.Debug("creating bin/c3c symlink", "target", filepath.Join(link, "c3c"), "link", binC3C)
 	if err := os.Symlink(filepath.Join(link, "c3c"), binC3C); err != nil {
 		return fmt.Errorf("failed to create bin/c3c symlink: %w", err)
 	}
 
+	slog.Debug("creating lib symlink", "target", filepath.Join(dir, "bin"), "link", stdLibC3C)
 	if err := os.Symlink(filepath.Join(dir, "bin"), stdLibC3C); err != nil {
 		return fmt.Errorf("failed to create standard library symlink: %w", err)
 	}
 
-	fmt.Printf("Now using c3c %s\n", version)
+	slog.Info("now using", "version", tag)
 	return nil
 }
 
@@ -323,10 +358,11 @@ func (v *C3VM) SetDefault(version string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
 	}
+	slog.Debug("setting default version", "version", version, "file", v.defaultFile())
 	if err := os.WriteFile(v.defaultFile(), []byte(version+"\n"), 0644); err != nil {
 		return fmt.Errorf("failed to write default version: %w", err)
 	}
-	fmt.Printf("Default version set to %s\n", version)
+	slog.Info("default version set", "version", version)
 	return nil
 }
 
@@ -353,6 +389,14 @@ func (v *C3VM) InitScript() string {
 	default:
 		return `export PATH="$HOME/.c3vm/bin:$PATH"`
 	}
+}
+
+func fileSize(path string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "unknown"
+	}
+	return fmt.Sprintf("%d bytes", info.Size())
 }
 
 func (v *C3VM) Which(version string) (string, error) {

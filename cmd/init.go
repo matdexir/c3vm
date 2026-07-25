@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/matdexir/c3vm/internal/c3vm"
 	"github.com/spf13/cobra"
@@ -17,7 +18,7 @@ var initCmd = &cobra.Command{
 		}
 
 		if vm.BinInPath() {
-			fmt.Println("~/.c3vm/bin is already in your PATH.")
+			slog.Info("~/.c3vm/bin is already in your PATH")
 			return nil
 		}
 

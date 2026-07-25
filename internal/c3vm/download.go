@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 )
 
 func downloadFile(url, dest string) error {
+	slog.Debug("starting download", "url", url, "dest", dest)
 	client := &http.Client{Timeout: 10 * time.Minute}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -21,6 +23,7 @@ func downloadFile(url, dest string) error {
 	}
 	defer resp.Body.Close()
 
+	slog.Debug("download response", "url", url, "status", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download returned %s", resp.Status)
 	}
@@ -35,20 +38,24 @@ func downloadFile(url, dest string) error {
 	}
 	defer out.Close()
 
+	slog.Debug("writing response body to file", "dest", dest)
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
+	slog.Debug("download completed successfully", "dest", dest)
 	return nil
 }
 
 func extractZip(src, dest string) error {
+	slog.Debug("extracting zip", "src", src, "dest", dest)
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %w", err)
 	}
 	defer r.Close()
 
+	slog.Debug("zip archive opened", "fileCount", len(r.File))
 	for _, f := range r.File {
 		fpath := filepath.Join(dest, f.Name)
 
@@ -89,6 +96,7 @@ func extractZip(src, dest string) error {
 }
 
 func extractTarGz(src, dest string) error {
+	slog.Debug("extracting tar.gz", "src", src, "dest", dest)
 	f, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open tar: %w", err)
@@ -142,8 +150,11 @@ func extractTarGz(src, dest string) error {
 }
 
 func extractArchive(src, dest string) error {
+	slog.Debug("detecting archive format", "src", src)
 	if strings.HasSuffix(src, ".zip") {
+		slog.Debug("detected zip archive")
 		return extractZip(src, dest)
 	}
+	slog.Debug("detected tar.gz archive")
 	return extractTarGz(src, dest)
 }

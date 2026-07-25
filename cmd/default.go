@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log/slog"
 
 	"github.com/matdexir/c3vm/internal/c3vm"
 	"github.com/spf13/cobra"
@@ -24,7 +24,7 @@ var defaultCmd = &cobra.Command{
 				return err
 			}
 			if def == "" {
-				fmt.Fprintln(os.Stderr, "No default version set")
+				slog.Warn("no default version set")
 				return nil
 			}
 			fmt.Println(def)

@@ -2,6 +2,7 @@ package c3vm
 
 import (
 	"fmt"
+	"log/slog"
 	"runtime"
 )
 
@@ -11,6 +12,7 @@ type Platform struct {
 }
 
 func Detect() Platform {
+	slog.Debug("detecting platform", "GOOS", runtime.GOOS, "GOARCH", runtime.GOARCH)
 	osMap := map[string]string{
 		"darwin":  "macos",
 		"linux":   "linux",
@@ -30,7 +32,9 @@ func Detect() Platform {
 	if arch == "" {
 		arch = runtime.GOARCH
 	}
-	return Platform{OS: os, Arch: arch}
+	p := Platform{OS: os, Arch: arch}
+	slog.Debug("platform detected", "os", p.OS, "arch", p.Arch)
+	return p
 }
 
 func (p Platform) AssetName() string {

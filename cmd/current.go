@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log/slog"
 
 	"github.com/matdexir/c3vm/internal/c3vm"
 	"github.com/spf13/cobra"
@@ -21,7 +21,7 @@ var currentCmd = &cobra.Command{
 			return err
 		}
 		if current == "" {
-			fmt.Fprintln(os.Stderr, "No active version set")
+			slog.Warn("no active version set")
 			return nil
 		}
 		fmt.Println(current)

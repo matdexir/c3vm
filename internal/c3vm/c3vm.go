@@ -2,6 +2,7 @@ package c3vm
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,6 +44,10 @@ func (v *C3VM) c3cBin() string {
 	return filepath.Join(v.binDir(), "c3c")
 }
 
+func (v *C3VM) c3cStdLib() string {
+	return filepath.Join(v.HomeDir, "lib")
+}
+
 func (v *C3VM) versionDir(version string) string {
 	return filepath.Join(v.versionsDir(), version)
 }
@@ -54,6 +59,51 @@ func (v *C3VM) ensureDirs() error {
 		}
 	}
 	return nil
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	sourceInfo, err := sourceFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	destFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, sourceInfo.Mode())
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		targetPath := filepath.Join(dst, relPath)
+
+		if d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return os.MkdirAll(targetPath, info.Mode())
+		}
+
+		return copyFile(path, targetPath)
+	})
 }
 
 func (v *C3VM) Install(version string) error {
@@ -102,14 +152,19 @@ func (v *C3VM) Install(version string) error {
 		return err
 	}
 
-	// Find c3c binary in extracted files
+	// Find c3c binary and std lib in extracted files
 	var c3cSrc string
-	filepath.Walk(extractDir, func(path string, info os.FileInfo, err error) error {
+	var c3cStdLib string
+	filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if !info.IsDir() && info.Name() == "c3c" {
+		if !d.IsDir() && d.Name() == "c3c" {
 			c3cSrc = path
+		}
+
+		if d.IsDir() && d.Name() == "lib" {
+			c3cStdLib = path
 		}
 		return nil
 	})
@@ -118,18 +173,25 @@ func (v *C3VM) Install(version string) error {
 		return fmt.Errorf("could not find c3c binary in the archive")
 	}
 
+	if c3cStdLib == "" {
+		return fmt.Errorf("could not find c3c standard library in the archive")
+	}
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("failed to create version directory: %w", err)
 	}
 
 	// Copy c3c binary to version dir
 	destC3C := filepath.Join(destDir, "c3c")
-	input, err := os.ReadFile(c3cSrc)
-	if err != nil {
-		return fmt.Errorf("failed to read c3c binary: %w", err)
+
+	if err := copyFile(c3cSrc, destC3C); err != nil {
+		return fmt.Errorf("failed to copy c3c binary: %w", err)
 	}
-	if err := os.WriteFile(destC3C, input, 0755); err != nil {
-		return fmt.Errorf("failed to write c3c binary: %w", err)
+
+	// Copy c3c std lib to version dir
+	destC3CStdLib := filepath.Join(destDir, "bin")
+	if err := copyDir(c3cStdLib, destC3CStdLib); err != nil {
+		return fmt.Errorf("failed to copy c3c standard library: %w", err)
 	}
 
 	fmt.Printf("Installed c3c %s\n", tag)
@@ -218,25 +280,30 @@ func (v *C3VM) Use(version string) error {
 		return fmt.Errorf("version %s is not installed", version)
 	}
 
+	if err := v.ensureDirs(); err != nil {
+		return err
+	}
+
 	link := v.currentLink()
 
-	// Remove existing symlink if any
 	os.Remove(link)
 
 	if err := os.Symlink(dir, link); err != nil {
 		return fmt.Errorf("failed to set current symlink: %w", err)
 	}
 
-	if err := v.ensureDirs(); err != nil {
-		return err
-	}
-
-	// Update bin/c3c symlink
 	binC3C := v.c3cBin()
 	os.Remove(binC3C)
 
+	stdLibC3C := v.c3cStdLib()
+	os.RemoveAll(stdLibC3C)
+
 	if err := os.Symlink(filepath.Join(link, "c3c"), binC3C); err != nil {
 		return fmt.Errorf("failed to create bin/c3c symlink: %w", err)
+	}
+
+	if err := os.Symlink(filepath.Join(dir, "bin"), stdLibC3C); err != nil {
+		return fmt.Errorf("failed to create standard library symlink: %w", err)
 	}
 
 	fmt.Printf("Now using c3c %s\n", version)
@@ -264,7 +331,14 @@ func (v *C3VM) SetDefault(version string) error {
 }
 
 func (v *C3VM) BinInPath() bool {
-	return strings.Contains(os.Getenv("PATH"), v.binDir())
+	path := os.Getenv("PATH")
+	bin := v.binDir()
+	for _, p := range strings.Split(path, ":") {
+		if p == bin {
+			return true
+		}
+	}
+	return false
 }
 
 func (v *C3VM) InitScript() string {

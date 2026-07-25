@@ -26,9 +26,11 @@ type Asset struct {
 	Size               int64  `json:"size"`
 }
 
+var httpClient = &http.Client{Timeout: 15 * time.Second}
+
 func ListReleases(page int) ([]Release, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=100&page=%d", apiBase, repoOwner, repoName, page)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases: %w", err)
 	}
@@ -47,7 +49,7 @@ func ListReleases(page int) ([]Release, error) {
 
 func GetLatestRelease() (*Release, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", apiBase, repoOwner, repoName)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
 	}

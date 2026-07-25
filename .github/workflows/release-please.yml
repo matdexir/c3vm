@@ -3,6 +3,12 @@ name: release-please
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Existing tag to upload artifacts to (e.g. v0.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,6 +16,7 @@ permissions:
 
 jobs:
   release-please:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -24,7 +31,11 @@ jobs:
 
   build:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        needs.release-please.outputs.release_created == 'true'
+      )
     strategy:
       matrix:
         include:
@@ -36,6 +47,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || '' }}
 
       - uses: actions/setup-go@v5
         with:
@@ -48,6 +61,6 @@ jobs:
       - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || needs.release-please.outputs.tag_name }}
         run: |
-          gh release upload "$TAG" c3vm#"${{ matrix.asset }}"
+          gh release upload "$TAG" c3vm#"${{ matrix.asset }}" --clobber

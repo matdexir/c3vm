@@ -26,18 +26,22 @@ c3vm init
 
 ## Usage
 
+Version strings can be specified with or without the `v` prefix — `0.8.0` and `v0.8.0` are equivalent.
+
 | Command | Description |
 |---|---|
-| `c3vm install <tag>` | Install a release by tag (e.g. `v0.8.0_2`) |
+| `c3vm install <version>` | Install a version (e.g. `0.8.0` or `v0.8.0`) |
 | `c3vm install latest` | Install the latest published release |
 | `c3vm list` | List installed versions |
 | `c3vm list-remote` | List available versions from GitHub |
-| `c3vm use <version>` | Switch to an installed version |
+| `c3vm use <version>` | Switch to a version (prompts to install if missing) |
+| `c3vm use -y <version>` | Auto-confirm install when switching |
 | `c3vm current` | Show the active version |
 | `c3vm default` | Show the default version |
 | `c3vm default <version>` | Set the default version |
 | `c3vm which [version]` | Show the path to the `c3c` binary |
 | `c3vm remove <version>` | Uninstall a version |
+| `c3vm rm <version>` | Alias for `remove` |
 | `c3vm init` | Print shell PATH setup instructions |
 
 ## How it works
@@ -47,8 +51,9 @@ All data lives in `~/.c3vm/`:
 ```
 ~/.c3vm/
 ├── versions/     # extracted compiler per version
-├── current ->    # symlink to the active version
+├── current ->    # symlink to the active version directory
 ├── default       # plain text file with the default version
+├── lib ->        # symlink to the active version's std lib
 └── bin/c3c ->    # symlink to the active c3c binary
 ```
 

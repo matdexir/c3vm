@@ -6,8 +6,9 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install <version|latest>",
-	Short: "Install a specific version or the latest release",
+	Use:     "install <version|latest>",
+	Aliases: []string{"i"},
+	Short:   "Install a specific version or the latest release",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vm, err := c3vm.New()

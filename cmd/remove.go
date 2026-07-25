@@ -6,8 +6,9 @@ import (
 )
 
 var removeCmd = &cobra.Command{
-	Use:   "remove <version>",
-	Short: "Remove an installed version",
+	Use:     "remove <version>",
+	Aliases: []string{"rm"},
+	Short:   "Remove an installed version",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vm, err := c3vm.New()

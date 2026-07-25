@@ -48,7 +48,7 @@ func (v *C3VM) c3cStdLib() string {
 	return filepath.Join(v.HomeDir, "lib")
 }
 
-func (v *C3VM) versionDir(version string) string {
+func (v *C3VM) VersionDir(version string) string {
 	return filepath.Join(v.versionsDir(), version)
 }
 
@@ -118,7 +118,7 @@ func (v *C3VM) Install(version string) error {
 		tag = version
 	}
 
-	destDir := v.versionDir(tag)
+	destDir := v.VersionDir(tag)
 	if _, err := os.Stat(destDir); err == nil {
 		return fmt.Errorf("version %s is already installed", tag)
 	}
@@ -217,7 +217,7 @@ func (v *C3VM) Install(version string) error {
 }
 
 func (v *C3VM) Remove(version string) error {
-	dir := v.versionDir(version)
+	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
 	}
@@ -275,7 +275,7 @@ func (v *C3VM) Current() (string, error) {
 }
 
 func (v *C3VM) Use(version string) error {
-	dir := v.versionDir(version)
+	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
 	}
@@ -319,7 +319,7 @@ func (v *C3VM) Default() (string, error) {
 }
 
 func (v *C3VM) SetDefault(version string) error {
-	dir := v.versionDir(version)
+	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
 	}
@@ -364,7 +364,7 @@ func (v *C3VM) Which(version string) (string, error) {
 		version = current
 	}
 
-	dir := v.versionDir(version)
+	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return "", fmt.Errorf("version %s is not installed", version)
 	}

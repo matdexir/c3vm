@@ -106,16 +106,21 @@ func copyDir(src, dst string) error {
 	})
 }
 
-func (v *C3VM) Install(version string) error {
-	var tag string
+func (v *C3VM) ResolveVersion(version string) (string, error) {
 	if version == "latest" {
 		release, err := github.GetLatestRelease()
 		if err != nil {
-			return err
+			return "", err
 		}
-		tag = release.TagName
-	} else {
-		tag = version
+		return release.TagName, nil
+	}
+	return version, nil
+}
+
+func (v *C3VM) Install(version string) error {
+	tag, err := v.ResolveVersion(version)
+	if err != nil {
+		return err
 	}
 
 	destDir := v.VersionDir(tag)
@@ -275,9 +280,13 @@ func (v *C3VM) Current() (string, error) {
 }
 
 func (v *C3VM) Use(version string) error {
-	dir := v.VersionDir(version)
+	tag, err := v.ResolveVersion(version)
+	if err != nil {
+		return err
+	}
+	dir := v.VersionDir(tag)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fmt.Errorf("version %s is not installed", version)
+		return fmt.Errorf("version %s is not installed", tag)
 	}
 
 	if err := v.ensureDirs(); err != nil {
@@ -306,7 +315,7 @@ func (v *C3VM) Use(version string) error {
 		return fmt.Errorf("failed to create standard library symlink: %w", err)
 	}
 
-	fmt.Printf("Now using c3c %s\n", version)
+	fmt.Printf("Now using c3c %s\n", tag)
 	return nil
 }
 

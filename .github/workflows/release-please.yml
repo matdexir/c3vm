@@ -50,4 +50,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
-          gh release upload "$TAG" c3vm#"${{ matrix.asset }}"
+          gh release upload "$TAG" c3vm#"${{ matrix.asset }}" --clobber

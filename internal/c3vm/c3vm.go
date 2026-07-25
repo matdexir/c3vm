@@ -107,6 +107,14 @@ func copyDir(src, dst string) error {
 	})
 }
 
+func normalizeVersion(version string) string {
+	version = strings.TrimSpace(version)
+	if !strings.HasPrefix(version, "v") {
+		return "v" + version
+	}
+	return version
+}
+
 func (v *C3VM) ResolveVersion(version string) (string, error) {
 	if version == "latest" {
 		release, err := github.GetLatestRelease()
@@ -115,7 +123,7 @@ func (v *C3VM) ResolveVersion(version string) (string, error) {
 		}
 		return release.TagName, nil
 	}
-	return version, nil
+	return normalizeVersion(version), nil
 }
 
 func (v *C3VM) Install(version string) error {
@@ -241,6 +249,7 @@ func (v *C3VM) Install(version string) error {
 }
 
 func (v *C3VM) Remove(version string) error {
+	version = normalizeVersion(version)
 	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
@@ -354,6 +363,7 @@ func (v *C3VM) Default() (string, error) {
 }
 
 func (v *C3VM) SetDefault(version string) error {
+	version = normalizeVersion(version)
 	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("version %s is not installed", version)
@@ -408,6 +418,7 @@ func (v *C3VM) Which(version string) (string, error) {
 		version = current
 	}
 
+	version = normalizeVersion(version)
 	dir := v.VersionDir(version)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return "", fmt.Errorf("version %s is not installed", version)

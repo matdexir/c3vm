@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log/slog"
 
 	"github.com/matdexir/c3vm/internal/c3vm"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var listRemoteCmd = &cobra.Command{
 			return err
 		}
 		if len(tags) == 0 {
-			fmt.Fprintln(os.Stderr, "No releases found")
+			slog.Warn("no releases found")
 			return nil
 		}
 		for _, tag := range tags {

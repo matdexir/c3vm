@@ -3,6 +3,7 @@ package github
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -30,6 +31,7 @@ var httpClient = &http.Client{Timeout: 15 * time.Second}
 
 func ListReleases(page int) ([]Release, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=100&page=%d", apiBase, repoOwner, repoName, page)
+	slog.Debug("fetching releases", "url", url, "page", page)
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch releases: %w", err)
@@ -44,11 +46,13 @@ func ListReleases(page int) ([]Release, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, fmt.Errorf("failed to decode releases: %w", err)
 	}
+	slog.Debug("releases fetched", "page", page, "count", len(releases))
 	return releases, nil
 }
 
 func GetLatestRelease() (*Release, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", apiBase, repoOwner, repoName)
+	slog.Debug("fetching latest release", "url", url)
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
@@ -63,6 +67,7 @@ func GetLatestRelease() (*Release, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, fmt.Errorf("failed to decode release: %w", err)
 	}
+	slog.Debug("latest release fetched", "tag", release.TagName)
 	return &release, nil
 }
 

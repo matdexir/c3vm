@@ -24,12 +24,17 @@ var useCmd = &cobra.Command{
 
 		version := args[0]
 
+		tag, err := vm.ResolveVersion(version)
+		if err != nil {
+			return err
+		}
+
 		// Check if the version is installed
-		dir := vm.VersionDir(version)
+		dir := vm.VersionDir(tag)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			if !useYes {
-				if !promptYesNo(fmt.Sprintf("Version %s is not installed. Download it now?", version)) {
-					return fmt.Errorf("version %s is not installed", version)
+				if !promptYesNo(fmt.Sprintf("Version %s is not installed. Download it now?", tag)) {
+					return fmt.Errorf("version %s is not installed", tag)
 				}
 			}
 
@@ -38,7 +43,7 @@ var useCmd = &cobra.Command{
 			}
 		}
 
-		return vm.Use(version)
+		return vm.Use(tag)
 	},
 }
 

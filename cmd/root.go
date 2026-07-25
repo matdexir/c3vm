@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 
@@ -11,6 +12,7 @@ import (
 var (
 	debug     bool
 	logFormat string
+	colorMode string
 )
 
 var rootCmd = &cobra.Command{
@@ -31,6 +33,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Enable debug logging")
 	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "text", "Log format (text|json)")
+	rootCmd.PersistentFlags().StringVar(&colorMode, "color", "auto", "Colorize output (auto|always|never)")
 }
 
 func setupLogger() error {
@@ -42,11 +45,27 @@ func setupLogger() error {
 	opts := &slog.HandlerOptions{Level: level}
 	var handler slog.Handler
 
+	useColor := false
+	switch colorMode {
+	case "always":
+		useColor = true
+	case "never":
+		useColor = false
+	case "auto":
+		useColor = isTerminal(os.Stderr)
+	default:
+		return fmt.Errorf("unsupported color mode: %s (use auto, always, or never)", colorMode)
+	}
+
 	switch logFormat {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stderr, opts)
 	case "text":
-		handler = slog.NewTextHandler(newColorWriter(os.Stderr), opts)
+		w := ioWriter(os.Stderr)
+		if useColor {
+			w = newColorWriter(os.Stderr)
+		}
+		handler = slog.NewTextHandler(w, opts)
 	default:
 		return fmt.Errorf("unsupported log format: %s (use text or json)", logFormat)
 	}
@@ -54,3 +73,5 @@ func setupLogger() error {
 	slog.SetDefault(slog.New(handler))
 	return nil
 }
+
+func ioWriter(w *os.File) io.Writer { return w }

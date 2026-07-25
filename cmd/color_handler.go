@@ -3,15 +3,16 @@ package cmd
 import (
 	"bytes"
 	"io"
+	"os"
 	"sync"
 )
 
 const (
-	colorRed   = "\033[31m"
-	colorGreen = "\033[32m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
 	colorYellow = "\033[33m"
-	colorCyan  = "\033[36m"
-	colorReset = "\033[0m"
+	colorCyan   = "\033[36m"
+	colorReset  = "\033[0m"
 )
 
 type colorWriter struct {
@@ -66,4 +67,12 @@ func (cw *colorWriter) colorize(line []byte) []byte {
 	result = append(result, line...)
 	result = append(result, []byte(colorReset)...)
 	return result
+}
+
+func isTerminal(w *os.File) bool {
+	stat, err := w.Stat()
+	if err != nil {
+		return false
+	}
+	return stat.Mode()&os.ModeCharDevice != 0
 }

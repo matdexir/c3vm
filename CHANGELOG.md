@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/matdexir/c3vm/compare/v0.1.1...v0.1.2) (2026-08-02)
+
+
+### Bug Fixes
+
+* install std lib under &lt;version&gt;/lib/std instead of &lt;version&gt;/bin/std ([#20](https://github.com/matdexir/c3vm/issues/20)) ([b8d250c](https://github.com/matdexir/c3vm/commit/b8d250c0715d4416b12a555ac2507e4207f13ece))
+
 ## [0.2.0](https://github.com/matdexir/c3vm/compare/v0.1.0...v0.2.0) (2026-07-25)
 
 

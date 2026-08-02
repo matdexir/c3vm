@@ -219,7 +219,7 @@ func (v *C3VM) Install(version string) error {
 	}
 
 	// Copy c3c std lib to version dir
-	destC3CStdLib := filepath.Join(destDir, "bin")
+	destC3CStdLib := filepath.Join(destDir, "lib")
 	slog.Debug("copying standard library", "src", c3cStdLib, "dest", destC3CStdLib)
 	if err := copyDir(c3cStdLib, destC3CStdLib); err != nil {
 		return fmt.Errorf("failed to copy c3c standard library: %w", err)
@@ -345,8 +345,8 @@ func (v *C3VM) Use(version string) error {
 		return fmt.Errorf("failed to create bin/c3c symlink: %w", err)
 	}
 
-	slog.Debug("creating lib symlink", "target", filepath.Join(dir, "bin"), "link", stdLibC3C)
-	if err := os.Symlink(filepath.Join(dir, "bin"), stdLibC3C); err != nil {
+	slog.Debug("creating lib symlink", "target", filepath.Join(dir, "lib"), "link", stdLibC3C)
+	if err := os.Symlink(filepath.Join(dir, "lib"), stdLibC3C); err != nil {
 		return fmt.Errorf("failed to create standard library symlink: %w", err)
 	}
 

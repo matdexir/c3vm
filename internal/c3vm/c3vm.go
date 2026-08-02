@@ -107,6 +107,59 @@ func copyDir(src, dst string) error {
 	})
 }
 
+func populateVersionDir(destDir, extractDir string) error {
+	// Find c3c binary and std lib in extracted files
+	var c3cSrc string
+	var c3cStdLib string
+	filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && d.Name() == "c3c" {
+			c3cSrc = path
+		}
+
+		if d.IsDir() && d.Name() == "lib" {
+			c3cStdLib = path
+		}
+		return nil
+	})
+
+	slog.Debug("located files in archive", "binary", c3cSrc, "stdlib", c3cStdLib)
+
+	if c3cSrc == "" {
+		return fmt.Errorf("could not find c3c binary in the archive")
+	}
+
+	if c3cStdLib == "" {
+		return fmt.Errorf("could not find c3c standard library in the archive")
+	}
+
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("failed to create version directory: %w", err)
+	}
+	slog.Debug("created version directory", "path", destDir)
+
+	// Copy c3c binary to version dir
+	destC3C := filepath.Join(destDir, "c3c")
+
+	slog.Debug("copying binary", "src", c3cSrc, "dest", destC3C)
+	if err := copyFile(c3cSrc, destC3C); err != nil {
+		return fmt.Errorf("failed to copy c3c binary: %w", err)
+	}
+
+	// Copy c3c std lib to version dir. c3c resolves its standard library
+	// as lib/std relative to its installed directory (the parent of the
+	// c3c binary), so the std lib must live under <version>/lib.
+	destC3CStdLib := filepath.Join(destDir, "lib")
+	slog.Debug("copying standard library", "src", c3cStdLib, "dest", destC3CStdLib)
+	if err := copyDir(c3cStdLib, destC3CStdLib); err != nil {
+		return fmt.Errorf("failed to copy c3c standard library: %w", err)
+	}
+
+	return nil
+}
+
 func normalizeVersion(version string) string {
 	version = strings.TrimSpace(version)
 	if !strings.HasPrefix(version, "v") {
@@ -115,8 +168,7 @@ func normalizeVersion(version string) string {
 	return version
 }
 
-func (v *C3VM) ResolveVersion(version string) (string, error) {
-	if version == "latest" {
+func (v *C3VM) ResolveVersion(version string) (string, error) {	if version == "latest" {
 		release, err := github.GetLatestRelease()
 		if err != nil {
 			return "", err
@@ -178,51 +230,8 @@ func (v *C3VM) Install(version string) error {
 	}
 	slog.Debug("extraction complete", "extractDir", extractDir)
 
-	// Find c3c binary and std lib in extracted files
-	var c3cSrc string
-	var c3cStdLib string
-	filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && d.Name() == "c3c" {
-			c3cSrc = path
-		}
-
-		if d.IsDir() && d.Name() == "lib" {
-			c3cStdLib = path
-		}
-		return nil
-	})
-
-	slog.Debug("located files in archive", "binary", c3cSrc, "stdlib", c3cStdLib)
-
-	if c3cSrc == "" {
-		return fmt.Errorf("could not find c3c binary in the archive")
-	}
-
-	if c3cStdLib == "" {
-		return fmt.Errorf("could not find c3c standard library in the archive")
-	}
-
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("failed to create version directory: %w", err)
-	}
-	slog.Debug("created version directory", "path", destDir)
-
-	// Copy c3c binary to version dir
-	destC3C := filepath.Join(destDir, "c3c")
-
-	slog.Debug("copying binary", "src", c3cSrc, "dest", destC3C)
-	if err := copyFile(c3cSrc, destC3C); err != nil {
-		return fmt.Errorf("failed to copy c3c binary: %w", err)
-	}
-
-	// Copy c3c std lib to version dir
-	destC3CStdLib := filepath.Join(destDir, "lib")
-	slog.Debug("copying standard library", "src", c3cStdLib, "dest", destC3CStdLib)
-	if err := copyDir(c3cStdLib, destC3CStdLib); err != nil {
-		return fmt.Errorf("failed to copy c3c standard library: %w", err)
+	if err := populateVersionDir(destDir, extractDir); err != nil {
+		return err
 	}
 
 	slog.Info("installed", "version", tag)

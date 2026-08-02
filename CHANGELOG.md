@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/matdexir/c3vm/compare/v0.1.2...v0.2.0) (2026-08-02)
+
+
+### Features
+
+* add version command ([#23](https://github.com/matdexir/c3vm/issues/23)) ([9b71e14](https://github.com/matdexir/c3vm/commit/9b71e140d1936350c5927fef69bc1556a49bb611))
+
 ## [0.1.2](https://github.com/matdexir/c3vm/compare/v0.1.1...v0.1.2) (2026-08-02)
 
 

@@ -56,7 +56,9 @@ jobs:
           cache: true
 
       - name: Build
-        run: go build -o c3vm .
+        env:
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || needs.release-please.outputs.tag_name }}
+        run: go build -ldflags "-X github.com/matdexir/c3vm/cmd.Version=$TAG" -o c3vm .
 
       - name: Upload to release
         env:
